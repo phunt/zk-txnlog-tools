@@ -1,0 +1,38 @@
+h1. ZooKeeper Transaction Log Tools
+
+*Author: "Patrick Hunt":http://people.apache.org/~phunt/* (follow me on "twitter":http://twitter.com/phunt)
+
+h2. Summary
+
+"This project":http://github.com/phunt/zk-txnlog-tools for examining a "ZooKeeper server":http://hadoop.apache.org/zookeeper/ transaction log. Transaction logs are output by the server to persist data (znode) changes, not to be confused with the log4j error/debug logs.
+
+h3. What's Apache ZooKeeper?
+
+From the "official site":http://hadoop.apache.org/zookeeper/: "ZooKeeper is a high-performance coordination service for distributed applications."
+
+It exposes common services - such as naming, configuration management, synchronization, and group services - in a simple interface so you don't have to write them from scratch. You can use it off-the-shelf to implement consensus, group management, leader election, and presence protocols. And you can build on it for your own, specific needs. 
+
+h2. License
+
+This project is licensed under the Apache License Version 2.0
+
+h2. Requirements
+
+* Python
+* "Cheetah":http://www.cheetahtemplate.org templating package are necessary to run this
+** On ubuntu "sudo apt-get install python-cheetah"
+
+before using the first time (or on update) run the following command
+
+cheetah compile *.tmpl
+
+h2. Usage
+
+<pre>
+usage here
+</pre>
+
+example of typical use
+
+bq. 
+
