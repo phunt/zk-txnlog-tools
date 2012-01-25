@@ -31,18 +31,59 @@ class LogFileHeader(object):
     def isvalid(self):
         return self.magic == self.MAGIC
 
+SESSIONCLOSE = -11
+SESSIONCREATE = -10
+ERROR = -1
+NOTIFICATION = 0
 CREATE = 1
 DELETE = 2
+EXISTS = 3
+GETDATA = 4
 SETDATA = 5
+GETACL = 6
 SETACL = 7
-SESSIONCREATE = -10
-SESSIONCLOSE = -11
-opcodes = { CREATE:'create', DELETE:'delete', SETDATA:'setdata', SETACL:'setacl',
-            SESSIONCREATE:'sessioncreate', SESSIONCLOSE:'sessionclose', }
+GETCHILDREN = 8
+SYNC = 9
+PING = 11
+GETCHILDREN2 = 12
+CHECK = 13
+MULTI = 14
+AUTH = 100
+SETWATCHES = 101
+SASL = 102
+
+opcodes = { 
+    SESSIONCLOSE:'sessionclose',
+    SESSIONCREATE:'sessioncreate',
+    ERROR:'error',
+    NOTIFICATION:'notification',
+    CREATE:'create',
+    DELETE:'delete',
+    EXISTS:'exists',
+    GETDATA:'getdata',
+    SETDATA:'setdata',
+    GETACL:'getacl',
+    SETACL:'setacl',
+    GETCHILDREN:'getchildren',
+    SYNC:'sync',
+    PING:'ping',
+    GETCHILDREN2:'getchildren2',
+    CHECK:'check',
+    MULTI:'multi',
+    AUTH:'auth',
+    SETWATCHES:'setwatches',
+    SASL:'sasl',
+}
 
 # endofstream
 class EOS(Exception):
     pass
+
+class UnknownType(Exception):
+    def __init__(self, type):
+        self.type = type
+    def __str__(self):
+        return "Unknown type %d" % self.type
 
 class Txn(object):
     def __init__(self, log):
@@ -64,6 +105,10 @@ class Txn(object):
             self.entry = TxnSessionCreate(log)
         elif h.type == SESSIONCLOSE:
             self.entry = TxnSessionClose(log)
+        elif h.type == ERROR:
+            self.entry = TxnError(log)
+        else:
+            raise(UnknownType(h.type))
 
         eor = log.read(1)
     def __str__(self):
@@ -71,7 +116,7 @@ class Txn(object):
 
 class TxnHeader(object):
     def __init__(self, log):
-        s = struct.Struct('>q i q q i')
+        s = struct.Struct('>Q I Q Q i')
         (self.client_id, self.cxid, self.zxid, self.time,
          self.type) = s.unpack(log.read(s.size))
     def op2type(self, type):
@@ -118,6 +163,58 @@ class Acl(TxnEntry):
     def __str__(self):
         return "Acl %s %s %x" % (self.scheme, self.id, self.perms)
 
+class TxnError(TxnEntry):
+    Ok = 0
+    SystemError = -1
+    RuntimeInconsistency = -2
+    DataInconsistency = -3
+    ConnectionLoss = -4
+    MarshallingError = -5
+    Unimplemented = -6
+    OperationTimeout = -7
+    BadArguments = -8
+    APIError = -100
+    NoNode = -101
+    NoAuth = -102
+    BadVersion = -103
+    NoChildrenForEphemerals = -108
+    NodeExists = -110
+    NotEmpty = -111
+    SessionExpired = -112
+    InvalidCallback = -113
+    InvalidACL = -114
+    AuthFailed = -115
+    SessionMoved = -118
+
+    errorcodes = {
+        Ok:'ok',
+        SystemError:'systemerror',
+        RuntimeInconsistency:'runtimeinconsistency',
+        DataInconsistency:'datainconsistency',
+        ConnectionLoss:'connectionloss',
+        MarshallingError:'marshallingerror',
+        Unimplemented:'unimplemented',
+        OperationTimeout:'operationtimeout',
+        BadArguments:'badarguments',
+        APIError:'apierror',
+        NoNode:'nonode',
+        NoAuth:'noauth',
+        BadVersion:'badversion',
+        NoChildrenForEphemerals:'nochildrenforephemerals',
+        NodeExists:'nodeexists',
+        NotEmpty:'notempty',
+        SessionExpired:'sessionexpired',
+        InvalidCallback:'invalidcallback',
+        InvalidACL:'invalidacl',
+        AuthFailed:'authfailed',
+        SessionMoved:'sessionmoved',
+    }
+
+    def __init__(self, log):
+        self.err = self.readInt(log)
+    def __str__(self):
+        return "Error %s" % self.errorcodes[self.err]
+
 class TxnCreate(TxnEntry):
     def __init__(self, log):
         self.path = self.readString(log)
@@ -130,7 +227,7 @@ class TxnCreate(TxnEntry):
 
 class TxnDelete(TxnEntry):
     def __init__(self, log):
-        path = self.readString(log)
+        self.path = self.readString(log)
     def __str__(self):
         return "Delete path %s" % self.path
 
